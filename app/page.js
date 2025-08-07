@@ -1,103 +1,128 @@
-import Image from "next/image";
+'use client'
+import './globals.css'
+import { useEffect, useState } from 'react';
+import { socket } from './socket';
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [isConnected, setIsConnected] = useState(false)
+  const [username, setUsername] = useState('')
+  const [log, setLog] = useState([])
+  const [userOnline, setUserOnline] = useState([])
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    if (socket.connected) {
+      onConnect()
+      setName()
+    }
+
+    function onConnect() {
+      setIsConnected(true)
+    }
+
+    function onDisconnect() {
+      setIsConnected(false)
+    }
+
+    function setName() {
+      let enterUsername = prompt('กรุณาใส่ชื่อของคุณ')
+      if (!enterUsername) {
+        setUsername('Noname')
+        socket.emit('enter username', 'Noname')
+      } else {
+        setUsername(enterUsername)
+        socket.emit('enter username', enterUsername)
+      }
+    }
+
+    function newMessage({ text, username }) {
+      setLog((prev) => [...prev, {
+        type: 'message',
+        message: text,
+        username,
+        timeStamp: new Date()
+      }])
+    }
+
+    function showUserConnected({ username }) {
+      setLog((prev) => [...prev, { type: 'login', username, timeStamp: new Date() }])
+    }
+
+    function getUserOnline(data) {
+      setUserOnline(data)
+    }
+
+    socket.on('connect', onConnect)
+    socket.on('disconnect', onDisconnect)
+    socket.on('chat message', newMessage)
+    socket.on('enter username', showUserConnected)
+    socket.on('user list', getUserOnline)
+
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('chat message', newMessage);
+      socket.iff('enter username', showUserConnected)
+      socket.off('user list', getUserOnline)
+    };
+  }, [])
+
+  const onSubmit = (event) => {
+    event.preventDefault();
+    const form = event.target;
+    const text = form.message.value;
+
+    if (text) {
+      socket.emit('chat message', text, username);
+    }
+
+    form.message.value = ''
+    return
+  }
+
+  return (
+    <div className='p-4 h-screen md:overflow-hidden'>
+      <div className='border p-2 flex items-center gap-4 max-w-screen overflow-hidden h-[6vh] md:h-[6vh]'>
+        <label className='flex-shrink-0'>สถานะ: {isConnected ? 'เชื่อมต่อ' : 'ตัดการเชื่อมต่อ'}</label>
+        <label className='truncate'>
+          ชื่อ: {username}
+        </label>
+      </div>
+      <div className='py-2 md:flex md:justify-between gap-4 md:w-full'>
+        <div className='h-[72vh] md:h-[100vh] md:w-full overflow-hidden space-y-2'>
+          <div className='h-[65vh] md:h-[80vh] overflow-y-scroll p-1 space-y-2 border'>
+            <p className='text-center text-xl font-bold md:text-4xl'>Chatzone</p>
+            <div className='md:space-y-4 space-y-2'>
+              {Array.isArray(log) && log.length >= 1 && log.map((item, index) => {
+                const time = new Date(item.timeStamp).toLocaleString()
+                if (item.type === 'login') {
+                  return <div className='flex justify-between p-2 truncate gap-4 border rounded-md md:ml-4' key={index}>
+                    <p className='md:w-full overflow-hidden'>Welcome {item.username} !</p>
+                    <p className='md:mr-2'>{new Date(item.timeStamp).toLocaleTimeString('th-TH', { hour12: false })}</p>
+                  </div>
+                } else if (item.type === 'message') {
+                  return <div key={index} className='p-2 rounded-md border md:ml-4'>
+                    <div className='flex justify-between'>
+                      <p className='w-[34vh] md:w-[132vh] overflow-hidden'>{item.username}</p>
+                      <p className='md:mr-2'>{new Date(item.timeStamp).toLocaleTimeString('th-TH', { hour12: false })}</p>
+                    </div>
+                    <p className='w-full break-all md:w-full'>Say: {item.message}</p>
+                  </div>
+                }
+              })}
+            </div>
+          </div>
+          <form className='flex justify-between gap-2 md:h-[4vh]' onSubmit={onSubmit}>
+            <input type='text' name='message' className=' w-full px-2 border' />
+            <button className='border w-[18vh] md:hover:cursor-pointer'>ส่งข้อความ</button>
+          </form>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        <div className='border md:w-[60vh] p-2 space-y-2 md:h-[85vh] md:mt-0'>
+          <p className='text-center text-xl font-bold md:text-4xl'>Online</p>
+          {Array.isArray(userOnline) && userOnline.length >= 1 && userOnline.map((item, index) => {
+            return <p key={index} className='w-full md:w-[40vh] overflow-hidden truncate'>• {item}</p>
+          })}
+        </div>
+      </div>
+    </div >
   );
 }

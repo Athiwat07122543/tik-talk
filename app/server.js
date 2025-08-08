@@ -24,8 +24,13 @@ app.prepare().then(() => {
             io.emit('user list', Array.from(connectedUsers.values()));
         })
         socket.on('disconnect', () => {
-            connectedUsers.delete(socket.id);
-            io.emit('user list', Array.from(connectedUsers.values()));
+            const username = connectedUsers.get(socket.id)
+            if (username) {
+                connectedUsers.delete(socket.id);
+                io.emit('disconnected', username)
+                io.emit('user list', Array.from(connectedUsers.values()));
+
+            }
         });
     })
 

@@ -114,7 +114,7 @@ export default function Home() {
                 const time = new Date(item.timeStamp).toLocaleString()
                 if (item.type === 'login') {
                   return <div className='flex justify-between p-2 truncate gap-4 border rounded-md md:ml-4 bg-green-600 border-gray-100' key={index}>
-                    <p className='md:w-full overflow-hidden text-white'>Welcome {item.username} !</p>
+                    <p className='md:w-full overflow-hidden text-white'>ยินดีต้อนรับ {item.username} !</p>
                     <p className='md:mr-2 text-white'>{new Date(item.timeStamp).toLocaleTimeString('th-TH', { hour12: false })}</p>
                   </div>
                 } else if (item.type === 'message') {
@@ -123,7 +123,7 @@ export default function Home() {
                       <p className='w-[34vh] md:w-[132vh] overflow-hidden'>{item.username}</p>
                       <p className='md:mr-2'>{new Date(item.timeStamp).toLocaleTimeString('th-TH', { hour12: false })}</p>
                     </div>
-                    <p className='w-full break-all md:w-full'>Say: {item.message}</p>
+                    <p className='w-full break-all md:w-full'>: {item.message}</p>
                   </div>
                 } else if (item.type === 'disconnected') {
                   return <div className='flex justify-between p-2 truncate gap-4 border rounded-md md:ml-4 bg-red-600 border-gray-100' key={index}>

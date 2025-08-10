@@ -12,8 +12,15 @@ const hanlder = app.getRequestHandler();
 const connectedUsers = new Map()
 
 app.prepare().then(() => {
-    const httpServer = createServer(hanlder);
-    const io = new Server(httpServer)
+    const httpServer = createServer((req, res) => {
+        hanlder(req, res);
+    });
+
+
+    const io = new Server(httpServer, {
+        path: '/socket.io',
+    });
+
     io.on('connection', (socket) => {
         socket.on('chat message', (text, username) => {
             io.emit('chat message', { text, username })
@@ -34,11 +41,7 @@ app.prepare().then(() => {
         });
     })
 
-    httpServer.once('error', (err) => {
-        console.log(err)
-        process.exit(1)
-    })
-        .listen(port, () => {
-            console.log(`> Ready on http://${hostname}:${port}`)
-        })
+    httpServer.listen(port, () => {
+        console.log(`> Ready on http://${hostname}:${port}`);
+    });
 })
